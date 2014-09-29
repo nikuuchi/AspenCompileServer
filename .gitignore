@@ -1,6 +1,7 @@
 # Logs
 logs
 *.log
+*.swp
 
 # Runtime data
 pids
@@ -26,3 +27,9 @@ node_modules
 
 # Users Environment Variables
 .lock-wscript
+
+
+# Config Files
+config/development.yaml
+config/production.yaml
+config/local.yaml
