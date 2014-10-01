@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "config": "^1.2.1",
-    "js-yaml": "^3.2.2"
+    "js-yaml": "^3.2.2",
+    "temp": "^0.8.1"
   }
 }
