@@ -7,3 +7,6 @@ emcc:
     env: ''
 out:
     path: '/tmp/'
+mongo:
+    host: 'localhost'
+    database: 'aspen'
