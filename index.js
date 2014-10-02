@@ -11,7 +11,7 @@ var MongoClient = require('mongodb').MongoClient;
 var mongopath = 'mongodb://' + config.mongo.host + '/' + config.mongo.database;
 
 function getTempFilePath(prefix) {
-    return config.out.path + prefix + crypto.randomBytes(8).readInt32LE(0) + '.c';
+    return config.out.path + prefix + crypto.randomBytes(8).readUInt32LE(0) + '.c';
 }
 
 function genResponse(res, j) {
