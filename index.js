@@ -11,7 +11,13 @@ var MongoClient = require('mongodb').MongoClient;
 var mongopath = 'mongodb://' + config.mongo.host + '/' + config.mongo.database;
 
 function getTempFilePath(prefix) {
-    return config.out.path + prefix + crypto.randomBytes(8).readUInt32LE(0) + '.c';
+    return config.out.path + prefix + crypto.randomBytes(8).readInt32LE(0) + '.c';
+}
+
+function genResponse(res, j) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.write(JSON.stringify(j));
+    res.end('\n');
 }
 
 var dispatchMap = {
@@ -20,32 +26,42 @@ var dispatchMap = {
         var tempfile = getTempFilePath("___");
 
         //ファイルの保存->コンパイル->(mongo)->リターン
+        console.log(tempfile);
         fs.writeFileSync(tempfile, req.body.source);
         var exec_command = command + ' ' + tempfile + ' -o ' + tempfile + '.js';
         exec(exec_command, function (error, stdout, stderr) {
-            fs.readFile(tempfile + '.js', function (err, data) {
-                var j = { error: stderr, message: stdout, source: data.toString() };
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.write(JSON.stringify(j));
-                res.end('\n');
-                MongoClient.connect(mongopath, function (err, db) {
-                    if (err)
-                        throw err;
-                    var collection = db.collection('raw_compile_data');
-                    var date = new Date();
-                    var data = {
-                        error: stderr,
-                        message: stdout,
-                        source: req.body.source,
-                        time: date.toISOString(),
-                        unix_time: date.getTime(),
-                        user_id: req.body.userId,
-                        subject_id: req.body.subjectId
-                    };
-                    collection.insert(data, function (err, docs) {
-                        console.log(docs);
+            fs.exists(tempfile + '.js', function (exists) {
+                console.log(exists);
+                if (exists) {
+                    fs.readFile(tempfile + '.js', function (err, data) {
+                        console.log(data);
+                        var j = { error: stderr, message: stdout, source: data.toString(), runnable: true };
+                        genResponse(res, j);
+
+                        MongoClient.connect(mongopath, function (err, db) {
+                            if (err)
+                                throw err;
+                            var collection = db.collection('raw_compile_data');
+                            var date = new Date();
+                            var data = {
+                                error: stderr,
+                                message: stdout,
+                                source: req.body.source,
+                                time: date.toISOString(),
+                                unix_time: date.getTime(),
+                                user_id: req.body.userId,
+                                subject_id: req.body.subjectId,
+                                runnable: true
+                            };
+                            collection.insert(data, function (err, docs) {
+                                console.log(docs);
+                            });
+                        });
                     });
-                });
+                } else {
+                    var j = { error: stderr, message: stdout, source: "", runnable: false };
+                    genResponse(res, j);
+                }
             });
         });
     }
