@@ -3,7 +3,7 @@ var http = require('http');
 //var crypto = require('crypto');
 var tmp = require('tmp');
 var config = require('config');
-var exec = require('exec-queue');
+var exec = require('exec-sync');
 var fs = require('fs');
 var path = require('path');
 var MongoClient = require('mongodb').MongoClient;
@@ -22,37 +22,38 @@ var dispatchMap = {
             fs.writeFileSync(tempfile, req.body.source);
             var exec_command = command + ' ' + tempfile + ' -o ' + tempfile + '.js';
             console.log(exec_command);
-            exec(exec_command, function (error, stdout, stderr) {
-                var exists = fs.existsSync(tempfile + '.js');
-                if (exists) {
-                    var data = fs.readFileSync(tempfile + '.js');
-                    var j = { error: stderr, message: stdout, source: data.toString(), runnable: true };
-                    genResponse(res, j);
-                    MongoClient.connect(mongopath, function (err, db) {
-                        if (err)
-                            throw err;
-                        var collection = db.collection('raw_compile_data');
-                        var date = new Date();
-                        var data = {
-                            error: stderr,
-                            message: stdout,
-                            source: req.body.source,
-                            time: date.toISOString(),
-                            unix_time: date.getTime(),
-                            user_id: req.body.userId,
-                            subject_id: req.body.subjectId,
-                            runnable: true
-                        };
-                        collection.insert(data, function (err, docs) {
-                            //console.log(docs);
-                        });
+            var out = exec(exec_command, true);
+            var stdout = out.stdout;
+            var stderr = out.stderr;
+            var exists = fs.existsSync(tempfile + '.js');
+            if (exists) {
+                var data = fs.readFileSync(tempfile + '.js');
+                var j = { error: stderr, message: stdout, source: data.toString(), runnable: true };
+                genResponse(res, j);
+                MongoClient.connect(mongopath, function (err, db) {
+                    if (err)
+                        throw err;
+                    var collection = db.collection('raw_compile_data');
+                    var date = new Date();
+                    var data = {
+                        error: stderr,
+                        message: stdout,
+                        source: req.body.source,
+                        time: date.toISOString(),
+                        unix_time: date.getTime(),
+                        user_id: req.body.userId,
+                        subject_id: req.body.subjectId,
+                        runnable: true
+                    };
+                    collection.insert(data, function (err, docs) {
+                        //console.log(docs);
                     });
-                }
-                else {
-                    var error_j = { error: stderr, message: stdout, source: "", runnable: false };
-                    genResponse(res, error_j);
-                }
-            });
+                });
+            }
+            else {
+                var error_j = { error: stderr, message: stdout, source: "", runnable: false };
+                genResponse(res, error_j);
+            }
         });
     }
 };
