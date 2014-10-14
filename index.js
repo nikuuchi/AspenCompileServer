@@ -1,15 +1,13 @@
 ///<reference path="typings/node/node.d.ts" />
 var http = require('http');
-var crypto = require('crypto');
+//var crypto = require('crypto');
+var tmp = require('tmp');
 var config = require('config');
 var exec = require('child_process').exec;
 var fs = require('fs');
 var path = require('path');
 var MongoClient = require('mongodb').MongoClient;
 var mongopath = 'mongodb://' + config.mongo.host + '/' + config.mongo.database;
-function getTempFilePath(prefix) {
-    return config.out.path + prefix + crypto.randomBytes(8).readUInt32LE(0) + '.c';
-}
 function genResponse(res, j) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.write(JSON.stringify(j));
@@ -18,41 +16,44 @@ function genResponse(res, j) {
 var dispatchMap = {
     "/compile": function (req, res) {
         var command = config.emcc.env + ' ' + config.emcc.path + ' ' + config.emcc.option + ' ';
-        var tempfile = getTempFilePath("___");
+        //var tempfile = getTempFilePath("___");
         //ファイルの保存->コンパイル->(mongo)->リターン
-        fs.writeFileSync(tempfile, req.body.source);
-        var exec_command = command + ' ' + tempfile + ' -o ' + tempfile + '.js';
-        exec(exec_command, function (error, stdout, stderr) {
-            fs.exists(tempfile + '.js', function (exists) {
-                if (exists) {
-                    fs.readFile(tempfile + '.js', function (err, data) {
-                        var j = { error: stderr, message: stdout, source: data.toString(), runnable: true };
-                        genResponse(res, j);
-                        MongoClient.connect(mongopath, function (err, db) {
-                            if (err)
-                                throw err;
-                            var collection = db.collection('raw_compile_data');
-                            var date = new Date();
-                            var data = {
-                                error: stderr,
-                                message: stdout,
-                                source: req.body.source,
-                                time: date.toISOString(),
-                                unix_time: date.getTime(),
-                                user_id: req.body.userId,
-                                subject_id: req.body.subjectId,
-                                runnable: true
-                            };
-                            collection.insert(data, function (err, docs) {
-                                //console.log(docs);
+        //fs.writeFileSync(tempfile, req.body.source);
+        tmp.file({ prefix: 'aspen', postfix: '.c' }, function (err, tempfile, fd) {
+            var exec_command = command + ' ' + tempfile + ' -o ' + tempfile + '.js';
+            console.log(exec_command);
+            exec(exec_command, function (error, stdout, stderr) {
+                fs.exists(tempfile + '.js', function (exists) {
+                    if (exists) {
+                        fs.readFile(tempfile + '.js', function (err, data) {
+                            var j = { error: stderr, message: stdout, source: data.toString(), runnable: true };
+                            genResponse(res, j);
+                            MongoClient.connect(mongopath, function (err, db) {
+                                if (err)
+                                    throw err;
+                                var collection = db.collection('raw_compile_data');
+                                var date = new Date();
+                                var data = {
+                                    error: stderr,
+                                    message: stdout,
+                                    source: req.body.source,
+                                    time: date.toISOString(),
+                                    unix_time: date.getTime(),
+                                    user_id: req.body.userId,
+                                    subject_id: req.body.subjectId,
+                                    runnable: true
+                                };
+                                collection.insert(data, function (err, docs) {
+                                    //console.log(docs);
+                                });
                             });
                         });
-                    });
-                }
-                else {
-                    var j = { error: stderr, message: stdout, source: "", runnable: false };
-                    genResponse(res, j);
-                }
+                    }
+                    else {
+                        var j = { error: stderr, message: stdout, source: "", runnable: false };
+                        genResponse(res, j);
+                    }
+                });
             });
         });
     }
