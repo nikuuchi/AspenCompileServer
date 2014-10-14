@@ -8,6 +8,7 @@ var fs = require('fs');
 var path = require('path');
 var MongoClient = require('mongodb').MongoClient;
 var mongopath = 'mongodb://' + config.mongo.host + '/' + config.mongo.database;
+var coll;
 function genResponse(res, j) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.write(JSON.stringify(j));
@@ -30,24 +31,19 @@ var dispatchMap = {
                 var data = fs.readFileSync(tempfile + '.js');
                 var j = { error: stderr, message: stdout, source: data.toString(), runnable: true };
                 genResponse(res, j);
-                MongoClient.connect(mongopath, function (err, db) {
-                    if (err)
-                        throw err;
-                    var collection = db.collection('raw_compile_data');
-                    var date = new Date();
-                    var data = {
-                        error: stderr,
-                        message: stdout,
-                        source: req.body.source,
-                        time: date.toISOString(),
-                        unix_time: date.getTime(),
-                        user_id: req.body.userId,
-                        subject_id: req.body.subjectId,
-                        runnable: true
-                    };
-                    collection.insert(data, function (err, docs) {
-                        //console.log(docs);
-                    });
+                var date = new Date();
+                var mongo_data = {
+                    error: stderr,
+                    message: stdout,
+                    source: req.body.source,
+                    time: date.toISOString(),
+                    unix_time: date.getTime(),
+                    user_id: req.body.userId,
+                    subject_id: req.body.subjectId,
+                    runnable: true
+                };
+                coll.insert(mongo_data, function (err, docs) {
+                    //console.log(docs);
                 });
             }
             else {
@@ -83,5 +79,10 @@ var server = http.createServer(function (req, res) {
         }
     });
 });
-console.log("server start port:" + config.server.port);
-server.listen(config.server.port, config.server.host);
+MongoClient.connect(mongopath, function (err, db) {
+    if (err)
+        throw err;
+    coll = db.collection('raw_compile_data');
+    console.log("server start port:" + config.server.port);
+    server.listen(config.server.port, config.server.host);
+});
