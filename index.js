@@ -20,7 +20,6 @@ var dispatchMap = {
         var command = config.emcc.env + ' ' + config.emcc.path + ' ' + config.emcc.option + ' ';
         var tempfile = getTempFilePath("___");
         //ファイルの保存->コンパイル->(mongo)->リターン
-        console.log(tempfile);
         fs.writeFileSync(tempfile, req.body.source);
         var exec_command = command + ' ' + tempfile + ' -o ' + tempfile + '.js';
         exec(exec_command, function (error, stdout, stderr) {
@@ -45,7 +44,7 @@ var dispatchMap = {
                                 runnable: true
                             };
                             collection.insert(data, function (err, docs) {
-                                console.log(docs);
+                                //console.log(docs);
                             });
                         });
                     });
@@ -59,7 +58,6 @@ var dispatchMap = {
     }
 };
 var server = http.createServer(function (req, res) {
-    console.log(req.method);
     var data = "";
     req.on('data', function (chunk) {
         data += chunk.toString();
@@ -85,6 +83,5 @@ var server = http.createServer(function (req, res) {
         }
     });
 });
-console.log(config);
 console.log("server start port:" + config.server.port);
 server.listen(config.server.port, config.server.host);
