@@ -18,6 +18,10 @@ function genResponse(res, j) {
     res.end('\n');
 }
 
+if(process.env.NODE_ENV == "production") {
+    exec("ulimit -n 65536", function(err, stdout, stderr) { console.log(err); });
+}
+
 var dispatchMap = {
     "/compile" : function(req, res) {
         var command = config.emcc.env + ' ' + config.emcc.path + ' ' + config.emcc.option + ' ';
@@ -28,36 +32,34 @@ var dispatchMap = {
             var exec_command = command + ' ' + tempfile + ' -o ' + tempfile + '.js';
             console.log(exec_command);
             exec(exec_command, function(error, stdout, stderr) {
-                fs.exists(tempfile + '.js', function(exists) {
-                    if(exists) {
-                        fs.readFile(tempfile + '.js', function(err, data) {
-                            var j = { error: stderr , message: stdout, source: data.toString(), runnable: true };
-                            genResponse(res, j);
+                var exists = fs.existsSync(tempfile + '.js');
+                if(exists) {
+                    var data = fs.readFileSync(tempfile + '.js');
+                    var j = { error: stderr , message: stdout, source: data.toString(), runnable: true };
+                    genResponse(res, j);
 
-                            MongoClient.connect(mongopath, function(err, db) {
-                                if(err) throw err;
-                                var collection = db.collection('raw_compile_data');
-                                var date = new Date();
-                                var data = {
-                                    error: stderr,
-                                    message: stdout,
-                                    source: req.body.source,
-                                    time: date.toISOString(),
-                                    unix_time: date.getTime(),
-                                    user_id: req.body.userId,
-                                    subject_id: req.body.subjectId,
-                                    runnable: true
-                                };
-                                collection.insert(data, function(err, docs) {
-                                    //console.log(docs);
-                                });
-                            });
+                    MongoClient.connect(mongopath, function(err, db) {
+                        if(err) throw err;
+                        var collection = db.collection('raw_compile_data');
+                        var date = new Date();
+                        var data = {
+                            error: stderr,
+                            message: stdout,
+                            source: req.body.source,
+                            time: date.toISOString(),
+                            unix_time: date.getTime(),
+                            user_id: req.body.userId,
+                            subject_id: req.body.subjectId,
+                            runnable: true
+                        };
+                        collection.insert(data, function(err, docs) {
+                            //console.log(docs);
                         });
-                    } else {
-                        var j = { error: stderr , message: stdout, source: "", runnable: false };
-                        genResponse(res, j);
-                    }
-                });
+                    });
+                } else {
+                    var error_j = { error: stderr , message: stdout, source: "", runnable: false };
+                    genResponse(res, error_j);
+                }
             });
         });
     }
