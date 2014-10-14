@@ -4,7 +4,7 @@ var http = require('http');
 //var crypto = require('crypto');
 var tmp = require('tmp');
 var config = require('config');
-var exec = require('exec-queue').exec;
+var exec = require('exec-queue');
 var fs = require('fs');
 var path = require('path');
 
