@@ -13,11 +13,6 @@ function genResponse(res, j) {
     res.write(JSON.stringify(j));
     res.end('\n');
 }
-if (process.env.NODE_ENV == "production") {
-    exec("ulimit -n 65536", function (err, stdout, stderr) {
-        console.log(err);
-    });
-}
 var dispatchMap = {
     "/compile": function (req, res) {
         var command = config.emcc.env + ' ' + config.emcc.path + ' ' + config.emcc.option + ' ';
