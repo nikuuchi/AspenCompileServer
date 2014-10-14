@@ -23,8 +23,8 @@ var dispatchMap = {
         var command = config.emcc.env + ' ' + config.emcc.path + ' ' + config.emcc.option + ' ';
         //var tempfile = getTempFilePath("___");
         //ファイルの保存->コンパイル->(mongo)->リターン
-        //fs.writeFileSync(tempfile, req.body.source);
         tmp.file({prefix: 'aspen', postfix: '.c'}, function(err,tempfile,fd) {
+            fs.writeFileSync(tempfile, req.body.source);
             var exec_command = command + ' ' + tempfile + ' -o ' + tempfile + '.js';
             console.log(exec_command);
             exec(exec_command, function(error, stdout, stderr) {
