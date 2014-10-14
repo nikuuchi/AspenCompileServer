@@ -31,10 +31,8 @@ var dispatchMap = {
         var exec_command = command + ' ' + tempfile + ' -o ' + tempfile + '.js';
         exec(exec_command, function(error, stdout, stderr) {
             fs.exists(tempfile + '.js', function(exists) {
-                console.log(exists);
                 if(exists) {
                     fs.readFile(tempfile + '.js', function(err, data) {
-                        console.log(data);
                         var j = { error: stderr , message: stdout, source: data.toString(), runnable: true };
                         genResponse(res, j);
 
@@ -86,8 +84,9 @@ var server = http.createServer(function(req, res) {
                 res.end('Not found\n');
             }
         } catch(e) {
-            res.writeHead(400, {'Content-Type': 'text/plain'});
-            res.end('Bad Request\n');
+            res.writeHead(400, {'Content-Type': 'application/json'});
+            console.log(e);
+            res.end('{"err": "Bad Request"}\n');
         }
     });
 });
