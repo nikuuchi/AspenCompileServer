@@ -26,6 +26,7 @@
   "dependencies": {
     "config": "^1.2.1",
     "exec-queue": "0.0.2",
+    "exec-sync": "^0.1.6",
     "js-yaml": "^3.2.2",
     "mongodb": "^1.4.17",
     "tmp": "0.0.24"
