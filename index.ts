@@ -21,10 +21,10 @@ function genResponse(res, j) {
     res.end('\n');
 }
 
-function createFileAndExec(tempfile, source, command, suffix, callback) {
+function createFileAndExec(tempfile, source, command, callback) {
     fs.writeFileSync(tempfile, source);
     var out = exec(command, true);
-    callback(out.stdout, out.stderr, fs.existsSync(tempfile + suffix));
+    callback(out.stdout, out.stderr);
 }
 
 function insertCompileData(error, message, source, user_id, subject_id, runnable) {
@@ -61,9 +61,11 @@ function insertPoplarData(error, message, source, dest, user_id, subject_id) {
     });
 }
 
+var compile_command = config.emcc.env + ' ' + config.emcc.path + ' ' + config.emcc.option + ' ';
+var poplar_command = config.poplar.env + ' java -jar ' + config.poplar.path + ' ' + config.poplar.option + ' ';
+
 var dispatchMap = {
     "/compile" : function(req, res) {
-        var command = config.emcc.env + ' ' + config.emcc.path + ' ' + config.emcc.option + ' ';
         //ファイルの保存->コンパイル->(mongo)->リターン
         tmp.file({prefix: 'aspen', postfix: '.c'}, function(err,tempfile,fd) {
             if(err) {
@@ -71,11 +73,12 @@ var dispatchMap = {
                 return;
             }
 
-            var exec_command = command + ' ' + tempfile + ' -o ' + tempfile + '.js';
-            console.log(exec_command);
-            createFileAndExec(tempfile, req.body.source, exec_command, '.js', function(stdout, stderr, exists) {
+            var destFile = tempfile + '.js';
+            var exec_command = compile_command + ' ' + tempfile + ' -o ' + destFile;
+            createFileAndExec(tempfile, req.body.source, exec_command, function(stdout, stderr) {
+                var exists = fs.existsSync(destFile);
                 if(exists) {
-                    var data = fs.readFileSync(tempfile + '.js');
+                    var data = fs.readFileSync(destFile);
                     var j = { error: stderr , message: stdout, source: data.toString(), runnable: true };
                     genResponse(res, j);
                     insertCompileData(stderr, stdout, req.body.source, req.body.userId, req.body.subjectId, true);
@@ -90,7 +93,6 @@ var dispatchMap = {
         });
     },
     "/poplar": function(req, res) {
-        var command = config.poplar.env + ' java -jar ' + config.poplar.path + ' ' + config.poplar.option + ' ';
         //ファイルの保存->poplar->(mongo)->リターン
         tmp.file({prefix: 'poplar', postfix: '.c'}, function(err,tempfile,fd) {
             if(err) {
@@ -98,11 +100,12 @@ var dispatchMap = {
                 return;
             }
 
-            var exec_command = command + ' -f ' + tempfile + ' -o ' + tempfile + '_rev.c';
+            var dest_file = tempfile + '_rev.c';
+            var exec_command = poplar_command + ' -f ' + tempfile + ' -o ' + dest_file;
             console.log(exec_command);
-            createFileAndExec(tempfile, req.body.source, exec_command, '_rev.c',  function(stdout, stderr, exists) {
-                if(exists) {
-                    var data = fs.readFileSync(tempfile + '_rev.c');
+            createFileAndExec(tempfile, req.body.source, exec_command, function(stdout, stderr) {
+                var data = fs.readFileSync(tempfile + '_rev.c');
+                if(data.length > 0) {
                     var j = { error: stderr , message: stdout, source: data.toString(), runnable: true };
                     genResponse(res, j);
                     insertPoplarData(stderr, stdout, req.body.source, data.toString(), req.body.userId, req.body.subjectId);
