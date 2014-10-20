@@ -98,9 +98,10 @@ var dispatchMap = {
                     insertPoplarData(stderr, stdout, req.body.source, data.toString(), req.body.userId, req.body.subjectId);
                 }
                 else {
-                    var error_j = { error: stderr, message: stdout, source: req.body.source, runnable: false };
+                    var msg = "エラー訂正候補を出せませんでした";
+                    var error_j = { error: stderr, message: stdout, source: msg, runnable: false };
                     genResponse(res, error_j);
-                    insertPoplarData(stderr, stdout, req.body.source, req.body.source, req.body.userId, req.body.subjectId);
+                    insertPoplarData(stderr, stdout, req.body.source, msg, req.body.userId, req.body.subjectId);
                 }
             });
         });
