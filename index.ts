@@ -138,7 +138,7 @@ var dispatchMap = {
     },
     "/activity": function(req, res) {
         insertActivityData(req.body.type, req.body.data, req.body.userId, req.body.subjectId);
-        genResponse(req, {});
+        genResponse(res, {});
     }
 };
 
