@@ -14,6 +14,7 @@ var mongopath = 'mongodb://' + config.mongo.host + '/' + config.mongo.database;
 
 var coll_compile_data;
 var coll_poplar_data;
+var coll_activity_data;
 
 function genResponse(res, j) {
     res.writeHead(200, {'Content-Type': 'application/json'});
@@ -25,6 +26,21 @@ function createFileAndExec(tempfile, source, command, callback) {
     fs.writeFileSync(tempfile, source);
     var out = exec(command, true);
     callback(out.stdout, out.stderr);
+}
+
+function insertActivityData(activity_type, data, user_id, subject_id) {
+    var date = new Date();
+    var mongo_data = {
+        type: activity_type,
+        data: data,
+        time: date.toISOString(),
+        unix_time: date.getTime(),
+        user_id: user_id,
+        subject_id: subject_id
+    };
+    coll_activity_data.insert(mongo_data, function(err, docs) {
+        //console.log(docs);
+    });
 }
 
 function insertCompileData(error, message, source, user_id, subject_id, runnable) {
@@ -119,6 +135,10 @@ var dispatchMap = {
                 }
             });
         });
+    },
+    "/activity": function(req, res) {
+        insertActivityData(req.body.type, req.body.data, req.body.userId, req.body.subjectId);
+        genResponse(req, {});
     }
 };
 
@@ -148,11 +168,11 @@ var server = http.createServer(function(req, res) {
     });
 });
 
-
 MongoClient.connect(mongopath, function(err, db) {
     if(err) throw err;
     coll_compile_data = db.collection('raw_compile_data');
     coll_poplar_data = db.collection('raw_poplar_data');
+    coll_activity_data = db.collection('raw_activity_data');
     console.log("server start port:" + config.server.port);
     server.listen(config.server.port, config.server.host);
 });
