@@ -5,6 +5,10 @@ emcc:
     path: '/usr/local/bin/emcc'
     option: '-O1 -W -Wall -Qunused-arguments'
     env: ''
+poplar:
+    path: '/path/to/Poplar.jar'
+    option: ''
+    env: ''
 out:
     path: '/tmp/'
 mongo:
